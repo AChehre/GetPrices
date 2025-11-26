@@ -2,16 +2,40 @@ const axios = require("axios");
 
 const { AssetType } = require("../assetTypes");
 
+const items = [
+  { asset: AssetType.USDT, symbol: "USDTIRT" },
+  { asset: AssetType.BITCOIN, symbol: "BTCIRT" },
+];
+
 async function getNobitexPrices() {
   try {
     const prices = [];
 
-    const result = await axios.get("https://apiv2.nobitex.ir/v3/orderbook/all");
-    if (result.data.status === "ok") {
-      let price = result.data.USDTIRT.lastTradePrice;
-      price = parseInt(price, 10);
+    const res = await axios.get("https://apiv2.nobitex.ir/v3/orderbook/all");
+
+    if (res.data.status !== "ok") {
+      throw new Error("Nobitex returned invalid status");
+    }
+
+    const marketData = res.data;
+
+    for (const item of items) {
+      const entry = marketData[item.symbol];
+
+      if (!entry) {
+        throw new Error(`Symbol ${item.symbol} not found in Nobitex response`);
+      }
+
+      let price = parseInt(entry.lastTradePrice, 10);
+
+      // Nobitex always returns price * 10 → convert back
       price = price / 10;
-      prices.push({ type: AssetType.USDT, price, timestamp: new Date() });
+
+      prices.push({
+        type: item.asset,
+        price,
+        timestamp: new Date(),
+      });
     }
 
     return { success: true, data: prices };
@@ -23,7 +47,7 @@ async function getNobitexPrices() {
 const nobitexService = {
   title: "Nobitex",
   service: getNobitexPrices,
-  assets: [AssetType.USDT, AssetType.BITCOIN],
+  assets: items.map((x) => x.asset),
 };
 
 module.exports = { nobitexService };

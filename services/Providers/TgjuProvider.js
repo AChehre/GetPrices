@@ -2,10 +2,16 @@ const cheerio = require("cheerio");
 
 const { AssetType } = require("../assetTypes");
 
+const items = [
+  { title: "تتر", asset: AssetType.USDT },
+  // { title: "بیت کوین", asset: AssetType.BITCOIN },
+  { title: "طلا ۱۸", asset: AssetType.GOLD18 },
+  { title: "دلار", asset: AssetType.DOLLAR },
+  { title: "سکه", asset: AssetType.COIN },
+];
+
 async function getTgjuPrices() {
   try {
-    const items = ["طلا ۱۸", "بیت کوین", "تتر", "دلار", "سکه"];
-
     const url = "https://www.tgju.org/";
     const res = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; MyScraper/1.0)" },
@@ -15,27 +21,34 @@ async function getTgjuPrices() {
     const html = await res.text();
 
     const $ = cheerio.load(html);
-
     const prices = [];
 
     $("h3").each((i, el) => {
       const title = $(el).text().trim();
 
-      let price = 0;
-      if (items.includes(title)) {
-        price = $(el)
-          .nextAll("span.info-value")
-          .find("span.info-price")
-          .text()
-          .trim();
-        let type = title;
-        if (type === "تتر") type = AssetType.USDT;
+      // find a matching item
+      const item = items.find((x) => x.title === title);
+      if (!item) return; // skip unrelated h3 items
 
-        price = parseInt(price.replace(/,/g, ""), 10); // remove commas → 1116970
-        price = price / 10;
+      let priceText = $(el)
+        .nextAll("span.info-value")
+        .find("span.info-price")
+        .text()
+        .trim();
 
-        prices.push({ type, price, timestamp: new Date() });
-      }
+      if (!priceText) return;
+
+      // Clean number format: remove commas (۱,۱۲۳ → 1123)
+      let price = parseInt(priceText.replace(/,/g, ""), 10);
+
+      // TGJU returns price * 10 → convert back
+      price = price / 10;
+
+      prices.push({
+        type: item.asset,
+        price,
+        timestamp: new Date(),
+      });
     });
 
     return { success: true, data: prices };
@@ -47,12 +60,7 @@ async function getTgjuPrices() {
 const tgjuService = {
   title: "Tgju",
   service: getTgjuPrices,
-  assets: [
-    AssetType.USDT,
-    AssetType.BITCOIN,
-    AssetType.GOLD18,
-    AssetType.DOLLAR,
-  ],
+  assets: items.map((x) => x.asset),
 };
 
 module.exports = { tgjuService };

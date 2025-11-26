@@ -2,6 +2,11 @@ const cheerio = require("cheerio");
 
 const { AssetType } = require("../assetTypes");
 
+const items = [
+  { asset: AssetType.USDT, dataSlug: "tether" },
+  { asset: AssetType.BITCOIN, dataSlug: "bitcoin" },
+];
+
 async function getArzdigitalPrices() {
   try {
     const url = "https://arzdigital.com/";
@@ -10,54 +15,52 @@ async function getArzdigitalPrices() {
     });
 
     if (!res.ok) throw new Error(`Failed: ${res.status}`);
-    const html = await res.text();
 
+    const html = await res.text();
     const $ = cheerio.load(html);
 
-    let priceText = null;
+    const data = items.map((item) => {
+      const row = $(`tr[data-slug="${item.dataSlug}"]`);
+      const price = getPrice(row, item.asset);
 
-    const row = $('tr[data-slug="tether"]');
+      return {
+        type: item.asset,
+        price,
+        timestamp: new Date(),
+      };
+    });
 
-    if (row.length === 0) {
-      throw new Error("USDT row not found");
-    }
-
-    priceText = row.find("div.pricetoman").text().trim(); // Example: "۱۱۳,۷۳۱ ت"
-
-    if (!priceText) {
-      throw new Error("USDT price not found");
-    }
-
-    // Remove the last "ت"
-    priceText = priceText.replace("ت", "").trim();
-
-    // Convert Persian digits → English digits
-    const persianToEnglish = (str) =>
-      str.replace(/[۰-۹]/g, (d) => "0123456789"[d.charCodeAt(0) - 1776]);
-
-    const englishNumber = persianToEnglish(priceText).replace(/,/g, "");
-
-    const price = parseInt(englishNumber, 10);
-
-    return {
-      success: true,
-      data: [
-        {
-          type: AssetType.USDT,
-          price,
-          timestamp: new Date(),
-        },
-      ],
-    };
+    return { success: true, data };
   } catch (err) {
     return { success: false, error: err.message };
   }
 }
 
+function getPrice(row, asset) {
+  if (row.length === 0) {
+    throw new Error(`Row for ${asset} not found`);
+  }
+
+  let priceText = row.find("div.pricetoman").text().trim();
+  if (!priceText) throw new Error(`Price for ${asset} not found`);
+
+  priceText = priceText.replace("ت", "").trim();
+
+  const persianToEnglish = (str) =>
+    str.replace(/[۰-۹]/g, (d) => "0123456789"[d.charCodeAt(0) - 1776]);
+
+  const cleaned = persianToEnglish(priceText).replace(/\D/g, "");
+
+  const price = parseInt(cleaned, 10);
+  if (isNaN(price)) throw new Error(`Invalid price for ${asset}`);
+
+  return price;
+}
+
 const arzdigitalService = {
   title: "Arzdigital",
   service: getArzdigitalPrices,
-  assets: [AssetType.USDT, AssetType.BITCOIN],
+  assets: items.map((i) => i.asset),
 };
 
 module.exports = { arzdigitalService };

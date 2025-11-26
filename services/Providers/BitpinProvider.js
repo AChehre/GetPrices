@@ -2,17 +2,34 @@ const axios = require("axios");
 
 const { AssetType } = require("../assetTypes");
 
+const items = [
+  { asset: AssetType.USDT, symbol: "USDT_IRT" },
+  { asset: AssetType.BITCOIN, symbol: "BTC_IRT" },
+];
+
 async function getBitpinPrices() {
   try {
-    const prices = [];
-
     const result = await axios.get(
       "https://api.bitpin.org/api/v1/mkt/tickers/"
     );
-    const found = result.data.find((element) => element.symbol === "USDT_IRT");
-    const price = parseInt(found.price, 10);
 
-    prices.push({ type: AssetType.USDT, price, timestamp: new Date() });
+    const tickers = result.data;
+
+    const prices = items.map((item) => {
+      const found = tickers.find((t) => t.symbol === item.symbol);
+
+      if (!found) {
+        throw new Error(`Symbol ${item.symbol} not found in Bitpin response`);
+      }
+
+      const price = parseInt(found.price, 10);
+
+      return {
+        type: item.asset,
+        price,
+        timestamp: new Date(),
+      };
+    });
 
     return { success: true, data: prices };
   } catch (err) {
@@ -23,7 +40,7 @@ async function getBitpinPrices() {
 const bitpinService = {
   title: "Bitpin",
   service: getBitpinPrices,
-  assets: [AssetType.USDT, AssetType.BITCOIN],
+  assets: items.map((x) => x.asset),
 };
 
 module.exports = { bitpinService };
