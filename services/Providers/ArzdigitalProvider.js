@@ -12,7 +12,7 @@ const items = [
   { asset: AssetType.BTC, dataSlug: "bitcoin" },
 ];
 
-async function getArzdigitalPrices() {
+async function getArzdigitalPrices(assets = []) {
   try {
     const url = "https://arzdigital.com/";
     const res = await fetch(url, {
@@ -24,7 +24,16 @@ async function getArzdigitalPrices() {
     const html = await res.text();
     const $ = cheerio.load(html);
 
-    const data = items.map((item) => {
+    const filteredItems =
+      !assets || assets.length === 0
+        ? items
+        : items.filter((i) =>
+            assets
+              .map((a) => a.toLowerCase())
+              .includes(i.asset.symbol.toLowerCase())
+          );
+
+    const data = filteredItems.map((item) => {
       const row = $(`tr[data-slug="${item.dataSlug}"]`);
       const price = getPrice(row, item.asset);
 

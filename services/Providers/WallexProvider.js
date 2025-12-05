@@ -11,7 +11,7 @@ const items = [
   { asset: AssetType.BTC, symbol: "BTCTMN" },
 ];
 
-async function getWallexPrices() {
+async function getWallexPrices(assets = []) {
   try {
     const prices = [];
 
@@ -21,9 +21,18 @@ async function getWallexPrices() {
       throw new Error("Wallex returned invalid response");
     }
 
+    const filteredItems =
+      !assets || assets.length === 0
+        ? items
+        : items.filter((i) =>
+            assets
+              .map((a) => a.toLowerCase())
+              .includes(i.asset.symbol.toLowerCase())
+          );    
+
     const symbols = res.data.result.symbols;
 
-    for (const item of items) {
+    for (const item of filteredItems) {
       const entry = symbols[item.symbol];
 
       if (!entry) {

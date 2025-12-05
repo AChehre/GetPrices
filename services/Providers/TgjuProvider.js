@@ -15,7 +15,7 @@ const items = [
   { title: "سکه", asset: AssetType.COIN },
 ];
 
-async function getTgjuPrices() {
+async function getTgjuPrices(assets = []) {
   try {
     const url = "https://www.tgju.org/";
     const res = await fetch(url, {
@@ -25,6 +25,15 @@ async function getTgjuPrices() {
     if (!res.ok) throw new Error(`Failed: ${res.status}`);
     const html = await res.text();
 
+    const filteredItems =
+      !assets || assets.length === 0
+        ? items
+        : items.filter((i) =>
+            assets
+              .map((a) => a.toLowerCase())
+              .includes(i.asset.symbol.toLowerCase())
+          );
+
     const $ = cheerio.load(html);
     const prices = [];
 
@@ -32,7 +41,7 @@ async function getTgjuPrices() {
       const title = $(el).text().trim();
 
       // find a matching item
-      const item = items.find((x) => x.title === title);
+      const item = filteredItems.find((x) => x.title === title);
       if (!item) return; // skip unrelated h3 items
 
       let priceText = $(el)

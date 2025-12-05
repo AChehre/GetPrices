@@ -12,7 +12,7 @@ const items = [
   { asset: AssetType.BTC, symbol: "BTC_IRT" },
 ];
 
-async function getBitpinPrices() {
+async function getBitpinPrices(assets = []) {
   try {
     const result = await axios.get(
       "https://api.bitpin.org/api/v1/mkt/tickers/"
@@ -20,7 +20,16 @@ async function getBitpinPrices() {
 
     const tickers = result.data;
 
-    const prices = items.map((item) => {
+    const filteredItems =
+      !assets || assets.length === 0
+        ? items
+        : items.filter((i) =>
+            assets
+              .map((a) => a.toLowerCase())
+              .includes(i.asset.symbol.toLowerCase())
+          );
+
+    const prices = filteredItems.map((item) => {
       const found = tickers.find((t) => t.symbol === item.symbol);
 
       if (!found) {

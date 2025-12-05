@@ -12,7 +12,7 @@ const items = [
   { asset: AssetType.BTC, symbol: "BTCIRT" },
 ];
 
-async function getNobitexPrices() {
+async function getNobitexPrices(assets = []) {
   try {
     const prices = [];
 
@@ -24,7 +24,16 @@ async function getNobitexPrices() {
 
     const marketData = res.data;
 
-    for (const item of items) {
+    const filteredItems =
+      !assets || assets.length === 0
+        ? items
+        : items.filter((i) =>
+            assets
+              .map((a) => a.toLowerCase())
+              .includes(i.asset.symbol.toLowerCase())
+          );
+
+    for (const item of filteredItems) {
       const entry = marketData[item.symbol];
 
       if (!entry) {
