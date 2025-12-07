@@ -3,35 +3,32 @@ const express = require("express");
 const { services } = require("./services/services");
 const { getPrices, getAveragePrices } = require("./services/getPrices");
 
+const { routes } = require("../shared/router/routes");
+const { parseAssets } = require("../shared/router/utils");
+
+const handlers = {
+  getPrices,
+  getAveragePrices,
+};
+
 const app = express();
 const PORT = 3000;
 
-app.get("/", async (req, res) => {
-  try {
-    const assets = getAssets(req);
-    const prices = await getPrices(assets);
-    res.json(prices);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch all prices" });
-  }
-});
+Object.keys(routes).forEach((path) => {
+  const route = routes[path];
+  const handler = handlers[route.handlerName];
 
-app.get("/average", async (req, res) => {
-  try {
-    const assets = getAssets(req);
-    const prices = await getAveragePrices(assets);
-    console.log(JSON.stringify(prices));
-    res.json(prices);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch average prices" });
-  }
-});
+  app.get(path, async (req, res) => {
+    try {
+      const assets = route.needsAssets ? parseAssets(req.query.assets) : [];
 
-function getAssets(req){
-  return req.query.assets ? req.query.assets.split(",") : []; // default empty array
-}
+      const result = await handler(assets);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  });
+});
 
 Object.entries(services).forEach(([key, service]) => {
   const fn = service.service;

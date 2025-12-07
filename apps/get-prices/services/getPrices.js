@@ -1,7 +1,6 @@
 const { services } = require("./services");
 
 async function getPrices(assets = []) {
-  console.log("Fetching prices for assets:", assets);
   const filteredServices = Object.entries(services).filter(([key, service]) => {
     // If no assets provided → include all services
     if (!assets || assets.length === 0) return true;
@@ -12,10 +11,6 @@ async function getPrices(assets = []) {
     );
   });
 
-  console.log(
-    "Filtered services:",
-    filteredServices.map(([key]) => key)
-  );
 
   const results = await Promise.all(
     filteredServices.map(async ([key, service]) => {
@@ -37,7 +32,6 @@ async function getPrices(assets = []) {
 }
 
 async function getAveragePrices(assets = []) {
-  console.log("Calculating average prices for assets:", assets);
   const results = await getPrices(assets);
 
   const pricesByAsset = {};
